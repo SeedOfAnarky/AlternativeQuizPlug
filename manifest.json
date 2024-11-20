@@ -1,0 +1,21 @@
+{
+    "manifest_version": 3,
+    "name": "Quiz Helper Plugin",
+    "version": "1.0",
+    "description": "Assists in completing quizzes by enabling buttons and managing state.",
+    "permissions": ["scripting", "storage", "activeTab"],
+    "host_permissions": ["https://doddsre.com/*"],
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "background": {
+      "service_worker": "background.js"
+    },
+    "content_scripts": [
+      {
+        "matches": ["https://doddsre.com/*"],
+        "js": ["content.js"]
+      }
+    ]
+  }
+  
