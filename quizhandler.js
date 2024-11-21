@@ -1,6 +1,13 @@
 const quizHandler = {
     // Entry point: Initialize and check Chrome storage
     initialize() {
+        // Check if "Congratulations!" message is present
+        const completionMessage = document.querySelector(".sensei-message.tick");
+        if (completionMessage && completionMessage.textContent.includes("Congratulations!")) {
+            pageHandler.log("Congratulations message detected. Disabling all functions.", "success");
+            return; // Exit early, disabling all further actions
+        }
+
         chrome.storage.local.get(['quiz_step'], async (result) => {
             const form = document.querySelector("form");
             if (!form) {
@@ -14,11 +21,14 @@ const quizHandler = {
                 pageHandler.log("AutoLoad: No step found in storage. Initializing Function 1.", "success");
                 await this.initializeFunction1();
             } else if (result.quiz_step === 'step2' && !originalButton) {
-                pageHandler.log("AutoLoad: Restoring Step 2...", "info");
+                pageHandler.log("AutoLoad: Restoring Step 2 and simulating Mod - QuizButton2 click.", "info");
                 await this.restoreStep2();
             } else if (result.quiz_step === 'step2' && originalButton) {
                 pageHandler.log("AutoLoad: Original button still present. Transitioning back to Step 1.", "warning");
                 await this.initializeFunction1();
+            } else if (result.quiz_step === 'step3') {
+                pageHandler.log("AutoLoad: Step 3 detected. Clearing storage and resetting quiz.", "info");
+                await this.clearStep3();
             } else {
                 pageHandler.log("AutoLoad: Restoring fallback functionality.", "info");
                 await this.initializeFunction2();
