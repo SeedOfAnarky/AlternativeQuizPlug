@@ -1,70 +1,115 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const enableLessonButton = document.getElementById("enableLesson");
-    const enableQuizButton = document.getElementById("enableQuiz");
-    const status = document.getElementById("status");
-  
-    // Fallback to inject the content script if not loaded
-    function injectContentScript(tabId) {
-      chrome.scripting.executeScript(
-        { target: { tabId: tabId }, files: ["content.js"] },
-        () => {
-          console.log("Content script injected.");
-          updateStatus("Content script injected.");
+// popup.js
+document.addEventListener('DOMContentLoaded', function() {
+    const status = document.getElementById('status');
+    let currentPageType = null;
+
+    // Button elements
+    const buttons = {
+        lesson: {
+            enable: document.getElementById('enableLesson'),
+            reset: document.getElementById('resetLesson')
+        },
+        quiz: {
+            stage1: document.getElementById('quizStage1'),
+            stage2: document.getElementById('quizStage2')
         }
-      );
+    };
+
+    function showStatus(message, type = 'success') {
+        status.textContent = message;
+        status.className = `status-${type}`;
+        status.style.display = 'block';
+        setTimeout(() => {
+            status.style.display = 'none';
+        }, 3000);
     }
-  
-    // Send a message to enable the lesson button
-    enableLessonButton.addEventListener("click", () => {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (!tabs.length) {
-          updateStatus("No active tab found.");
-          return;
-        }
-        chrome.tabs.sendMessage(tabs[0].id, { action: "enableLesson" }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.warn("Content script not found. Injecting...");
-            injectContentScript(tabs[0].id);
-          } else {
-            handleResponse(response, "Lesson button enabled!");
-          }
+
+    async function getCurrentTab() {
+        const [tab] = await chrome.tabs.query({ 
+            active: true, 
+            currentWindow: true,
+            url: ["https://www.doddsre.com/*"]
         });
-      });
-    });
-  
-    // Send a message to enable quiz functionality
-    enableQuizButton.addEventListener("click", () => {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (!tabs.length) {
-          updateStatus("No active tab found.");
-          return;
+        return tab;
+    }
+
+    async function sendMessage(target, action) {
+        try {
+            const tab = await getCurrentTab();
+            if (!tab) {
+                throw new Error('Please navigate to a Dodds RE page');
+            }
+
+            const response = await chrome.tabs.sendMessage(tab.id, { target, action });
+            if (response.success) {
+                showStatus(response.message, 'success');
+            } else {
+                showStatus(response.message || 'Operation failed', 'error');
+            }
+        } catch (error) {
+            showStatus(error.message, 'error');
         }
-        chrome.tabs.sendMessage(tabs[0].id, { action: "enableQuiz" }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.warn("Content script not found. Injecting...");
-            injectContentScript(tabs[0].id);
-          } else {
-            handleResponse(response, "Quiz functionality enabled!");
-          }
+    }
+
+    async function updateButtonStates() {
+        try {
+            const tab = await getCurrentTab();
+            if (!tab) {
+                disableAllButtons();
+                showStatus('Please navigate to a Dodds RE page', 'error');
+                return;
+            }
+
+            const response = await chrome.tabs.sendMessage(tab.id, { action: 'getPageType' });
+            currentPageType = response.pageType;
+
+            // Enable/disable buttons based on page type
+            const lessonButtons = document.querySelector('.button-group:nth-child(1)');
+            const quizButtons = document.querySelector('.button-group:nth-child(2)');
+
+            if (currentPageType === 'LESSON') {
+                lessonButtons.style.opacity = '1';
+                quizButtons.style.opacity = '0.5';
+                enableButtons(buttons.lesson);
+                disableButtons(buttons.quiz);
+            } else if (currentPageType === 'QUIZ') {
+                lessonButtons.style.opacity = '0.5';
+                quizButtons.style.opacity = '1';
+                enableButtons(buttons.quiz);
+                disableButtons(buttons.lesson);
+            } else {
+                disableAllButtons();
+            }
+
+        } catch (error) {
+            disableAllButtons();
+            showStatus('Error updating button states', 'error');
+        }
+    }
+
+    function enableButtons(buttonGroup) {
+        Object.values(buttonGroup).forEach(button => {
+            button.disabled = false;
         });
-      });
-    });
-  
-    // Handle response or errors
-    function handleResponse(response, successMessage) {
-      if (!response || !response.message) {
-        console.error("No valid response received.");
-        updateStatus("No valid response received.");
-      } else {
-        console.log(response.message || successMessage);
-        updateStatus(response.message || successMessage);
-      }
     }
-  
-    // Update the status message in the popup
-    function updateStatus(message) {
-      status.textContent = message;
-      setTimeout(() => (status.textContent = ""), 3000);
+
+    function disableButtons(buttonGroup) {
+        Object.values(buttonGroup).forEach(button => {
+            button.disabled = true;
+        });
     }
-  });
-  
+
+    function disableAllButtons() {
+        disableButtons(buttons.lesson);
+        disableButtons(buttons.quiz);
+    }
+
+    // Setup button click handlers
+    buttons.lesson.enable.addEventListener('click', () => sendMessage('lesson', 'enable'));
+    buttons.lesson.reset.addEventListener('click', () => sendMessage('lesson', 'reset'));
+    buttons.quiz.stage1.addEventListener('click', () => sendMessage('quiz', 'stage1'));
+    buttons.quiz.stage2.addEventListener('click', () => sendMessage('quiz', 'stage2'));
+
+    // Initialize popup
+    updateButtonStates();
+});
