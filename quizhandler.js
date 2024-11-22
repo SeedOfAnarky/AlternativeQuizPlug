@@ -1,11 +1,9 @@
 const quizHandler = {
-    // Entry point: Initialize and check Chrome storage
     initialize() {
-        // Check if "Congratulations!" message is present
         const completionMessage = document.querySelector(".sensei-message.tick");
         if (completionMessage && completionMessage.textContent.includes("Congratulations!")) {
             pageHandler.log("Congratulations message detected. Disabling all functions.", "success");
-            return; // Exit early, disabling all further actions
+            return;
         }
 
         chrome.storage.local.get(['quiz_step'], async (result) => {
@@ -35,7 +33,6 @@ const quizHandler = {
             }
         });
 
-        // Add Reset Quiz button listener
         const resetButton = document.querySelector("input[name='quiz_reset']");
         if (resetButton) {
             resetButton.addEventListener('click', async () => {
@@ -45,7 +42,6 @@ const quizHandler = {
         }
     },
 
-    // Initialize Step 1
     async initializeFunction1() {
         const form = document.querySelector("form");
         if (!form) {
@@ -53,12 +49,11 @@ const quizHandler = {
             return;
         }
 
-        await this.setRadiosFalse(form);
+        await this.setCorrectAnswers(form);
         await this.addButton1(form);
         pageHandler.log("Initialized Function 1.", "success");
     },
 
-    // Add Mod - QuizButton1
     async addButton1(form) {
         const button1 = document.createElement("input");
         button1.type = "submit";
@@ -82,14 +77,12 @@ const quizHandler = {
                 quiz_step: "step2",
                 last_updated: Date.now()
             });
-
             pageHandler.log("Form submitted via Mod - QuizButton1.", "success");
         });
 
         pageHandler.log("Mod - QuizButton1 added.", "success");
     },
 
-    // Add Mod - QuizButton2
     async addButton2(form) {
         const button2 = document.createElement("input");
         button2.type = "submit";
@@ -101,35 +94,44 @@ const quizHandler = {
         pageHandler.log("Mod - QuizButton2 added.", "success");
     },
 
-    // Set all radio buttons to "false"
-    async setRadiosFalse(form) {
-        const radios = form.querySelectorAll("input[type='radio']");
-        radios.forEach(radio => {
-            radio.checked = radio.value === "false";
-        });
-        pageHandler.log("All radio buttons set to 'false'.", "info");
-    },
+    async setCorrectAnswers(form) {
+        const wrongAnswers = document.querySelectorAll(".answer_message.user_wrong");
+        
+        if (wrongAnswers.length > 0) {
+            wrongAnswers.forEach(wrongAnswer => {
+                const answerText = wrongAnswer.textContent;
+                const correctAnswer = answerText.split("Incorrect - Right Answer:")[1].trim();
+                
+                const questionDiv = wrongAnswer.closest("li");
+                if (!questionDiv) {
+                    pageHandler.log("Could not find question container.", "error");
+                    return;
+                }
 
-    // Process existing correct answers
-    async processCorrectAnswers(correctAnswers, form) {
-        correctAnswers.forEach(answer => {
-            const questionDiv = answer.closest("li");
-            if (!questionDiv) {
-                pageHandler.log("Could not find question container.", "error");
+                const radioInputs = questionDiv.querySelectorAll("input[type='radio']");
+                radioInputs.forEach(radio => {
+                    if (radio.value === correctAnswer) {
+                        radio.checked = true;
+                        pageHandler.log(`Set answer for question ${radio.name}.`, "success");
+                    }
+                });
+            });
+        } else {
+            const radioButtons = document.querySelectorAll("#wrap_all #sensei-quiz-list > li.multiple-choice > ul.answers > li:first-child > input[type='radio']");
+            if (!radioButtons.length) {
+                pageHandler.log("No radio buttons found.", "error");
                 return;
             }
 
-            const trueRadio = questionDiv.querySelector("input[value='true']");
-            if (trueRadio) {
-                trueRadio.checked = true;
-                pageHandler.log(`Set answer for question ${trueRadio.name}.`, "success");
-            }
-        });
+            radioButtons.forEach(radio => {
+                radio.checked = true;
+                pageHandler.log(`Set first answer for question ${radio.name}.`, "success");
+            });
+        }
 
-        pageHandler.log("Processed existing correct answers.", "info");
+        pageHandler.log("Processed all answers.", "info");
     },
 
-    // Restore Step 2
     async restoreStep2() {
         const form = document.querySelector("form");
         if (!form) {
@@ -137,18 +139,17 @@ const quizHandler = {
             return;
         }
 
-        const existingCorrectAnswers = document.querySelectorAll(".answer_message.user_wrong");
-        if (existingCorrectAnswers.length > 0) {
-            await this.processCorrectAnswers(existingCorrectAnswers, form);
+        const existingWrongAnswers = document.querySelectorAll(".answer_message.user_wrong");
+        if (existingWrongAnswers.length > 0) {
+            await this.setCorrectAnswers(form);
         } else {
-            pageHandler.log("No existing correct answers found.", "warning");
+            pageHandler.log("No existing wrong answers found.", "warning");
         }
 
         await this.addButton2(form);
         pageHandler.log("Restored Step 2.", "success");
     },
 
-    // Initialize Default Step
     async initializeFunction2() {
         const form = document.querySelector("form");
         if (!form) {
@@ -156,12 +157,17 @@ const quizHandler = {
             return;
         }
 
-        await this.setRadiosFalse(form);
+        await this.setCorrectAnswers(form);
         pageHandler.log("Initialized Function 2.", "info");
     },
+
+    async clearStep3() {
+        await chrome.storage.local.remove(['quiz_step', 'lesson_state']);
+        pageHandler.log("Cleared step 3 storage.", "success");
+        await this.initializeFunction1();
+    }
 };
 
-// Initialize the quiz handler when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     quizHandler.initialize();
 });
