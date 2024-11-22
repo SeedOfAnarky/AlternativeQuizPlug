@@ -58,7 +58,7 @@ const quizHandler = {
         const button1 = document.createElement("input");
         button1.type = "submit";
         button1.name = "quiz_complete";
-        button1.value = "Mod - QuizButton1";
+        button1.value = "Get Answers : Step 1";
         button1.classList.add("quiz-submit", "complete");
 
         const span = document.createElement("span");
@@ -87,7 +87,7 @@ const quizHandler = {
         const button2 = document.createElement("input");
         button2.type = "submit";
         button2.name = "quiz_complete";
-        button2.value = "Mod - QuizButton2";
+        button2.value = "Submit Answers : Step 2";
         button2.classList.add("complete-quiz-button");
 
         form.appendChild(button2);
@@ -100,35 +100,36 @@ const quizHandler = {
         if (wrongAnswers.length > 0) {
             wrongAnswers.forEach(wrongAnswer => {
                 const answerText = wrongAnswer.textContent;
-                const correctAnswer = answerText.split("Incorrect - Right Answer:")[1].trim();
+                const correctAnswer = answerText.split("Right Answer:")[1].trim();
                 
                 const questionDiv = wrongAnswer.closest("li");
                 if (!questionDiv) {
                     pageHandler.log("Could not find question container.", "error");
                     return;
                 }
-
+    
                 const radioInputs = questionDiv.querySelectorAll("input[type='radio']");
                 radioInputs.forEach(radio => {
-                    if (radio.value === correctAnswer) {
+                    // Handle both multiple choice and boolean values
+                    if (radio.value.toLowerCase() === correctAnswer.toLowerCase()) {
                         radio.checked = true;
                         pageHandler.log(`Set answer for question ${radio.name}.`, "success");
                     }
                 });
             });
         } else {
-            const radioButtons = document.querySelectorAll("#wrap_all #sensei-quiz-list > li.multiple-choice > ul.answers > li:first-child > input[type='radio']");
+            const radioButtons = document.querySelectorAll("#wrap_all #sensei-quiz-list > li.multiple-choice > ul.answers > li:first-child > input[type='radio'], #wrap_all #sensei-quiz-list > li.boolean > ul.answers > li:first-child > input[type='radio']");
             if (!radioButtons.length) {
                 pageHandler.log("No radio buttons found.", "error");
                 return;
             }
-
+    
             radioButtons.forEach(radio => {
                 radio.checked = true;
                 pageHandler.log(`Set first answer for question ${radio.name}.`, "success");
             });
         }
-
+    
         pageHandler.log("Processed all answers.", "info");
     },
 
