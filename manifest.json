@@ -4,9 +4,8 @@
   "version": "1.0",
   "description": "Assists in completing quizzes by enabling buttons and managing state.",
   "permissions": [
-    "scripting",
-    "storage",
-    "activeTab"
+    "storage"
+
   ],
   "host_permissions": [
     "https://www.doddsre.com/*"
