@@ -1,5 +1,18 @@
-// lessonHandler.js
 (function() {
+    async function initialize() {
+        try {
+            const lessonButton = document.querySelector('footer a.button.disabled[title="View the Lesson Quiz"]');
+            if (!lessonButton) return;
+
+            const { autoEnableLesson } = await chrome.storage.local.get(['autoEnableLesson']);
+            if (autoEnableLesson) {
+                await enableLesson();
+            }
+        } catch (error) {
+            console.error('Lesson initialization error:', error);
+        }
+    }
+
     async function enableLesson() {
         console.log("Enabling lesson functionality...");
         
@@ -56,5 +69,23 @@
                 .catch(error => sendResponse({ success: false, message: error.message }));
             return true;
         }
+    });
+
+    // Initialize both immediately and on DOM load
+    initialize();
+    document.addEventListener('DOMContentLoaded', initialize);
+
+    // Monitor for mutations that might add the button later
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.addedNodes.length) {
+                initialize();
+            }
+        }
+    });
+
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
     });
 })();

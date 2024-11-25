@@ -67,15 +67,21 @@
     <div class="button-container">
         <div class="button-group">
             <div class="group-label">Lesson Controls</div>
-            <button id="enableLesson">Enable Lesson</button>
-            <button id="resetLesson">Reset Lesson</button>
+            <div class="checkbox-container">
+                <input type="checkbox" id="autoEnableLesson" />
+                <label for="autoEnableLesson">Auto Enable Lessons</label>
+            </div>
+            <button id="enableLesson" disabled>Enable Lesson</button>
+            <button id="resetLesson" disabled>Reset Lesson</button>
         </div>
+    
         <div class="button-group">
             <div class="group-label">Quiz Controls</div>
-            <button id="quizStage1">Enable Quiz Stage 1</button>
-            <button id="quizStage2">Enable Quiz Stage 2</button>
+            <button id="quizStage1" disabled>Enable Quiz Stage 1</button>
+            <button id="quizStage2" disabled>Enable Quiz Stage 2</button>
         </div>
     </div>
+    
     <div id="status"></div>
     <script src="popup.js"></script>
 </body>

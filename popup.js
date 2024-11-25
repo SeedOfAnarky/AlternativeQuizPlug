@@ -1,9 +1,8 @@
-// popup.js
 document.addEventListener('DOMContentLoaded', function() {
     const status = document.getElementById('status');
+    const autoEnableCheckbox = document.getElementById('autoEnableLesson');
     let currentPageType = null;
 
-    // Button elements
     const buttons = {
         lesson: {
             enable: document.getElementById('enableLesson'),
@@ -19,9 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
         status.textContent = message;
         status.className = `status-${type}`;
         status.style.display = 'block';
-        setTimeout(() => {
-            status.style.display = 'none';
-        }, 3000);
+        setTimeout(() => { status.style.display = 'none'; }, 3000);
     }
 
     async function getCurrentTab() {
@@ -36,9 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function sendMessage(target, action) {
         try {
             const tab = await getCurrentTab();
-            if (!tab) {
-                throw new Error('Please navigate to a Dodds RE page');
-            }
+            if (!tab) throw new Error('Please navigate to a Dodds RE page');
 
             const response = await chrome.tabs.sendMessage(tab.id, { target, action });
             if (response.success) {
@@ -63,7 +58,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await chrome.tabs.sendMessage(tab.id, { action: 'getPageType' });
             currentPageType = response.pageType;
 
-            // Enable/disable buttons based on page type
             const lessonButtons = document.querySelector('.button-group:nth-child(1)');
             const quizButtons = document.querySelector('.button-group:nth-child(2)');
 
@@ -72,31 +66,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 quizButtons.style.opacity = '0.5';
                 enableButtons(buttons.lesson);
                 disableButtons(buttons.quiz);
+                autoEnableCheckbox.disabled = false;
             } else if (currentPageType === 'QUIZ') {
                 lessonButtons.style.opacity = '0.5';
                 quizButtons.style.opacity = '1';
                 enableButtons(buttons.quiz);
                 disableButtons(buttons.lesson);
+                autoEnableCheckbox.disabled = true;
             } else {
                 disableAllButtons();
+                autoEnableCheckbox.disabled = true;
             }
 
         } catch (error) {
             disableAllButtons();
+            autoEnableCheckbox.disabled = true;
             showStatus('Error updating button states', 'error');
         }
     }
 
     function enableButtons(buttonGroup) {
-        Object.values(buttonGroup).forEach(button => {
-            button.disabled = false;
-        });
+        Object.values(buttonGroup).forEach(button => button.disabled = false);
     }
 
     function disableButtons(buttonGroup) {
-        Object.values(buttonGroup).forEach(button => {
-            button.disabled = true;
-        });
+        Object.values(buttonGroup).forEach(button => button.disabled = true);
     }
 
     function disableAllButtons() {
@@ -104,12 +98,20 @@ document.addEventListener('DOMContentLoaded', function() {
         disableButtons(buttons.quiz);
     }
 
-    // Setup button click handlers
+    // Load saved checkbox state
+    chrome.storage.local.get(['autoEnableLesson'], (result) => {
+        autoEnableCheckbox.checked = result.autoEnableLesson || false;
+    });
+
+    // Event Listeners
+    autoEnableCheckbox.addEventListener('change', (e) => {
+        chrome.storage.local.set({ autoEnableLesson: e.target.checked });
+    });
+
     buttons.lesson.enable.addEventListener('click', () => sendMessage('lesson', 'enable'));
     buttons.lesson.reset.addEventListener('click', () => sendMessage('lesson', 'reset'));
     buttons.quiz.stage1.addEventListener('click', () => sendMessage('quiz', 'stage1'));
     buttons.quiz.stage2.addEventListener('click', () => sendMessage('quiz', 'stage2'));
 
-    // Initialize popup
     updateButtonStates();
 });
